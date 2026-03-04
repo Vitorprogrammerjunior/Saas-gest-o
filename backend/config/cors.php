@@ -11,7 +11,7 @@ return [
     ]),
 
     'allowed_origins_patterns' => [
-        'https://*.up\.railway\.app',   // Allow any Railway subdomain
+        '#https://.*\.up\.railway\.app#',   // Allow any Railway subdomain
     ],
 
     'allowed_headers' => ['*'],
