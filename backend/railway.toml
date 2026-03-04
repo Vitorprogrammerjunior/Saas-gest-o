@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache && cp .env.example .env && php artisan key:generate --force"
+buildCommand = "mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache && cp .env.example .env"
 
 [deploy]
 startCommand = "bash start.sh"
