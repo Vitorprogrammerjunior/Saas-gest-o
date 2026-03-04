@@ -69,6 +69,7 @@
       </nav>
 
       <div class="sidebar-footer">
+        <NotificationBell />
         <div class="user-card">
           <div class="avatar" :style="{ background: getUserColor(auth.user?.name) }">
             {{ getInitials(auth.user?.name) }}
@@ -101,6 +102,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import NotificationBell from '@/components/NotificationBell.vue'
 
 const auth = useAuthStore()
 const route = useRoute()

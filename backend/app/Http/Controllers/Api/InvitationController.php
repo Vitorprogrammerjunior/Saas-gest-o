@@ -117,4 +117,37 @@ class InvitationController extends Controller
 
         return response()->json(['message' => 'Convite cancelado.']);
     }
+
+    /**
+     * List pending invitations for the authenticated user — O(k)
+     */
+    public function myInvitations(Request $request): JsonResponse
+    {
+        $invitations = Invitation::where('email', $request->user()->email)
+            ->where('status', 'pending')
+            ->where('expires_at', '>', now())
+            ->with(['workspace:id,name', 'inviter:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($invitations);
+    }
+
+    /**
+     * Decline invitation by token — O(1)
+     */
+    public function decline(Request $request, string $token): JsonResponse
+    {
+        $invitation = Invitation::where('token', $token)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        if ($request->user()->email !== $invitation->email) {
+            return response()->json(['message' => 'Este convite não pertence a você.'], 403);
+        }
+
+        $invitation->update(['status' => 'declined']);
+
+        return response()->json(['message' => 'Convite recusado.']);
+    }
 }

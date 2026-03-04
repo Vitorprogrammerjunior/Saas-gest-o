@@ -36,10 +36,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('workspaces', WorkspaceController::class);
 
     // Invitations
+    Route::get('/invitations/pending', [InvitationController::class, 'myInvitations']);
+    Route::post('/invitations/{token}/accept', [InvitationController::class, 'accept']);
+    Route::post('/invitations/{token}/decline', [InvitationController::class, 'decline']);
     Route::post('/workspaces/{workspace}/invite', [InvitationController::class, 'invite']);
     Route::get('/workspaces/{workspace}/invitations', [InvitationController::class, 'index']);
     Route::delete('/workspaces/{workspace}/invitations/{invitation}', [InvitationController::class, 'cancel']);
-    Route::post('/invitations/{token}/accept', [InvitationController::class, 'accept']);
 
     // Labels (no shallow — always scoped to workspace)
     Route::apiResource('workspaces.labels', LabelController::class)
