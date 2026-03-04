@@ -1,3 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "mkdir -p database storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache && cp .env.example .env && php artisan key:generate --force && touch database/database.sqlite && chmod 777 database database/database.sqlite && php artisan migrate:fresh --seed --force"
+buildCommand = "mkdir -p storage/framework/{sessions,views,cache/data} storage/logs bootstrap/cache && cp .env.example .env && php artisan key:generate --force"
+
+[deploy]
+startCommand = "bash start.sh"
