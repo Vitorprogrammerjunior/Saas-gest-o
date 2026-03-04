@@ -272,7 +272,9 @@ A API possui documentação interativa completa via **Swagger UI**, onde é poss
 
 ## ☁️ Deploy no Railway
 
-O projeto está pronto para deploy no [Railway](https://railway.app) com **dois serviços** (backend + frontend), usando **Nixpacks** (auto-detect) e **SQLite** — sem necessidade de Docker ou banco externo.
+O projeto está pronto para deploy no [Railway](https://railway.app) com **um único serviço**, usando **Nixpacks** e **SQLite** — sem Docker, sem banco externo, sem CORS.
+
+> O build do frontend (Vue) acontece automaticamente e é servido pelo próprio Laravel.
 
 ### Passo a passo
 
@@ -281,19 +283,18 @@ O projeto está pronto para deploy no [Railway](https://railway.app) com **dois 
 Railway Dashboard → New Project
 ```
 
-**2. Crie o serviço Backend:**
+**2. Crie o serviço:**
 ```
 Add Service → GitHub Repo → Selecione o repo
 Root Directory: backend
 ```
 
-**3. Configure as variáveis de ambiente do Backend:**
+**3. Configure as variáveis de ambiente:**
 ```env
 APP_NAME=TaskFlow
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://SEU-BACKEND.up.railway.app
-FRONTEND_URL=https://SEU-FRONTEND.up.railway.app
+APP_URL=https://SEU-APP.up.railway.app
 DB_CONNECTION=sqlite
 BCRYPT_ROUNDS=12
 SESSION_DRIVER=database
@@ -303,32 +304,20 @@ LOG_CHANNEL=stack
 LOG_LEVEL=error
 ```
 
-> ⚡ **APP_KEY** é gerado automaticamente no primeiro deploy.
-
-**4. Crie o serviço Frontend:**
+**4. Gere o domain público:**
 ```
-Add Service → GitHub Repo → Selecione o repo
-Root Directory: frontend
+Settings → Networking → Generate Domain
 ```
 
-**5. Configure a variável de ambiente do Frontend:**
-```env
-VITE_API_URL=https://SEU-BACKEND.up.railway.app
-```
-
-**6. Gere os domains públicos:**
-```
-Backend → Settings → Networking → Generate Domain
-Frontend → Settings → Networking → Generate Domain
-```
-
-**7. Atualize as URLs** — Copie os domains gerados e atualize `APP_URL` e `FRONTEND_URL` no backend, e `VITE_API_URL` no frontend com os valores reais.
+**5. Atualize a URL** — Copie o domain gerado e coloque em `APP_URL`.
 
 ### A cada deploy
-O backend irá automaticamente:
-1. Criar o banco SQLite
-2. Rodar todas as migrations
-3. Executar o seeder (dados demo)
+O Railway irá automaticamente:
+1. Instalar dependências PHP (Composer)
+2. Buildar o frontend Vue (`npm run build`)
+3. Copiar os assets para o `public/` do Laravel
+4. Criar o banco SQLite
+5. Rodar migrations + seeder (dados demo)
 
 ### Credenciais Demo (após seed)
 | Email | Senha | Papel |

@@ -1,13 +1,9 @@
 import axios from 'axios'
 
-// In production, VITE_API_URL points to the backend service (e.g. https://taskflow-backend.up.railway.app)
-// In development, Vite proxy handles /api → localhost:8000
-const baseURL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api'
-
+// Both dev (Vite proxy) and production (same domain via Laravel)
+// use /api as base URL — no CORS needed
 const api = axios.create({
-  baseURL,
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

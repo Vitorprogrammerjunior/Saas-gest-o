@@ -2,20 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
 /*
 |--------------------------------------------------------------------------
 | API Documentation (Swagger UI)
 |--------------------------------------------------------------------------
-|
-| Protected routes — only accessible when APP_ENV=local or
-| API_DOCS_ENABLED=true in .env
-|
-| Access: http://localhost:8000/docs
-|
 */
 Route::middleware('api.docs')->group(function () {
     Route::get('/docs', function () {
@@ -29,3 +19,23 @@ Route::middleware('api.docs')->group(function () {
         );
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| SPA Catch-All
+|--------------------------------------------------------------------------
+| In production, the Vue SPA is built into public/.
+| This catch-all serves index.html for any non-API route,
+| allowing Vue Router to handle client-side routing.
+|
+*/
+Route::get('/{any}', function () {
+    $indexPath = public_path('index.html');
+
+    if (file_exists($indexPath)) {
+        return response()->file($indexPath);
+    }
+
+    // Fallback for local dev (no built SPA)
+    return view('welcome');
+})->where('any', '^(?!api|docs|sanctum|broadcasting).*$');
