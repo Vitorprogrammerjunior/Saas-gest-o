@@ -16,8 +16,5 @@ else
     php artisan migrate --force
 fi
 
-echo "==> Starting PHP-FPM..."
-php-fpm -D
-
-echo "==> Starting nginx..."
-exec nginx -g "daemon off;"
+echo "==> Starting server..."
+exec php artisan serve --host=0.0.0.0 --port=8080
