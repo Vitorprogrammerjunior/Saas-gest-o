@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow API — Swagger</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0f0f23;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        /* ── Custom Header ──────────────────── */
+        .custom-header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            padding: 32px 48px;
+            color: white;
+        }
+        .custom-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+        .custom-header p {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+        .custom-header .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 12px;
+            vertical-align: middle;
+        }
+
+        /* ── Swagger UI Overrides ────────────── */
+        .swagger-ui {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Dark theme for Swagger */
+        .swagger-ui .topbar { display: none; }
+
+        .swagger-ui .info { margin: 20px 0; }
+        .swagger-ui .info .title { color: #e2e8f0; }
+        .swagger-ui .info .description p { color: #94a3b8; }
+        .swagger-ui .info .description a { color: #818cf8; }
+        .swagger-ui .info .description code { color: #c084fc; background: #1e1b4b; }
+        .swagger-ui .info .description table { border-color: #334155; }
+        .swagger-ui .info .description th { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+        .swagger-ui .info .description td { color: #cbd5e1; border-color: #334155; }
+
+        .swagger-ui .scheme-container {
+            background: #1e1b4b;
+            box-shadow: none;
+            border: 1px solid #312e81;
+        }
+
+        .swagger-ui .opblock-tag {
+            color: #e2e8f0;
+            border-color: #334155;
+        }
+        .swagger-ui .opblock-tag:hover { background: rgba(99, 102, 241, 0.08); }
+
+        .swagger-ui .opblock {
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .swagger-ui .opblock.opblock-get {
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+        }
+        .swagger-ui .opblock.opblock-get .opblock-summary-method { background: #3b82f6; }
+
+        .swagger-ui .opblock.opblock-post {
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+        }
+        .swagger-ui .opblock.opblock-post .opblock-summary-method { background: #22c55e; }
+
+        .swagger-ui .opblock.opblock-put {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+        }
+        .swagger-ui .opblock.opblock-put .opblock-summary-method { background: #f59e0b; }
+
+        .swagger-ui .opblock.opblock-delete {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+        .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #ef4444; }
+
+        .swagger-ui .opblock .opblock-summary-method {
+            border-radius: 6px;
+            font-weight: 700;
+            min-width: 70px;
+        }
+
+        .swagger-ui .opblock .opblock-summary-path { color: #e2e8f0; }
+        .swagger-ui .opblock .opblock-summary-description { color: #94a3b8; }
+        .swagger-ui .opblock .opblock-summary { border: none; }
+
+        .swagger-ui .opblock-body pre.microlight {
+            background: #0f172a !important;
+            border-radius: 6px;
+            border: 1px solid #1e293b;
+            color: #e2e8f0;
+        }
+
+        .swagger-ui .opblock-description-wrapper p,
+        .swagger-ui .opblock-external-docs-wrapper p,
+        .swagger-ui .opblock-title_normal p {
+            color: #cbd5e1;
+        }
+
+        .swagger-ui table thead tr td,
+        .swagger-ui table thead tr th {
+            color: #94a3b8;
+            border-color: #334155;
+        }
+        .swagger-ui .parameter__name { color: #c4b5fd; }
+        .swagger-ui .parameter__type { color: #94a3b8; }
+        .swagger-ui .parameter__in { color: #64748b; }
+
+        .swagger-ui .responses-inner h4,
+        .swagger-ui .responses-inner h5 { color: #e2e8f0; }
+
+        .swagger-ui .response-col_status { color: #a78bfa; }
+        .swagger-ui .response-col_description { color: #cbd5e1; }
+
+        .swagger-ui .model-title { color: #c4b5fd; }
+        .swagger-ui .model { color: #cbd5e1; }
+
+        .swagger-ui .btn {
+            border-radius: 6px;
+        }
+        .swagger-ui .btn.authorize {
+            color: #a78bfa;
+            border-color: #a78bfa;
+        }
+        .swagger-ui .btn.authorize svg { fill: #a78bfa; }
+
+        .swagger-ui .btn.execute {
+            background: #6366f1;
+            border-color: #6366f1;
+        }
+        .swagger-ui .btn.execute:hover {
+            background: #4f46e5;
+        }
+
+        .swagger-ui .dialog-ux .modal-ux {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+        }
+        .swagger-ui .dialog-ux .modal-ux-header h3 { color: #e2e8f0; }
+        .swagger-ui .dialog-ux .modal-ux-content p { color: #94a3b8; }
+
+        .swagger-ui input[type=text],
+        .swagger-ui textarea {
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 6px;
+        }
+
+        .swagger-ui select {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+        }
+
+        .swagger-ui .markdown p,
+        .swagger-ui .markdown li { color: #cbd5e1; }
+        .swagger-ui .markdown code {
+            color: #c084fc;
+            background: #1e1b4b;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .swagger-ui .model-box { background: #1e293b; }
+        .swagger-ui section.models { border: 1px solid #334155; border-radius: 8px; }
+        .swagger-ui section.models h4 { color: #e2e8f0; border-color: #334155; }
+
+        .swagger-ui .loading-container .loading::after {
+            color: #a78bfa;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f0f23; }
+        ::-webkit-scrollbar-thumb { background: #4338ca; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+    </style>
+</head>
+<body>
+    <div class="custom-header">
+        <h1>
+            ⚡ TaskFlow API
+            <span class="badge">v1.0.0</span>
+        </h1>
+        <p>Interactive API documentation — SaaS Kanban Work Management Platform</p>
+    </div>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.18.2/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = () => {
+            SwaggerUIBundle({
+                url: '/docs/openapi.yaml',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: 'StandaloneLayout',
+                defaultModelsExpandDepth: 1,
+                defaultModelExpandDepth: 2,
+                docExpansion: 'list',
+                filter: true,
+                showExtensions: true,
+                tryItOutEnabled: true,
+                persistAuthorization: true
+            });
+        };
+    </script>
+</body>
+</html>

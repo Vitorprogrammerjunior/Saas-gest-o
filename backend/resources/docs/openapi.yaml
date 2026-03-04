@@ -1,0 +1,1557 @@
+openapi: 3.0.3
+info:
+  title: TaskFlow API
+  description: |
+    RESTful API for **TaskFlow** — a SaaS Kanban-style project management platform.
+
+    ## Authentication
+    All protected endpoints require a **Bearer token** obtained via `/api/login` or `/api/register`.
+
+    Include it in the `Authorization` header:
+    ```
+    Authorization: Bearer {your-token}
+    ```
+
+    ## Authorization Roles
+    | Role | Permissions |
+    |------|-------------|
+    | **Owner** | Full access, can delete workspace |
+    | **Admin** | Can manage boards, cards, labels, invitations |
+    | **Member** | Can view everything, create cards and comments |
+
+    ## Real-time
+    TaskFlow uses **Pusher** (WebSockets) for real-time board updates via Laravel Broadcasting.
+  version: 1.0.0
+  contact:
+    name: TaskFlow Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local Development
+
+tags:
+  - name: Auth
+    description: Authentication & user management
+  - name: Workspaces
+    description: Multi-tenant workspace management
+  - name: Invitations
+    description: Invite members via email
+  - name: Labels
+    description: Labels scoped to workspace
+  - name: Boards
+    description: Kanban boards within workspaces
+  - name: Columns
+    description: Board columns management
+  - name: Cards
+    description: Task cards within columns
+  - name: Comments
+    description: Card comments
+  - name: Dashboard
+    description: Analytics & activity feed
+
+# ──────────────────────────────────────────────
+# Security Schemes
+# ──────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum Token
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: João Silva
+        email:
+          type: string
+          format: email
+          example: joao@taskflow.com
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          example: 1|abc123def456ghi789...
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Minha Empresa
+        slug:
+          type: string
+          example: minha-empresa
+        description:
+          type: string
+          nullable: true
+          example: Workspace principal da equipe
+        owner_id:
+          type: integer
+          example: 1
+        boards_count:
+          type: integer
+          example: 3
+        members_count:
+          type: integer
+          example: 5
+        created_at:
+          type: string
+          format: date-time
+
+    Board:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Sprint 1
+        description:
+          type: string
+          nullable: true
+        color:
+          type: string
+          example: "#6366f1"
+        is_archived:
+          type: boolean
+          example: false
+        workspace_id:
+          type: integer
+        columns_count:
+          type: integer
+          example: 4
+        cards_count:
+          type: integer
+          example: 12
+
+    Column:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: A Fazer
+        position:
+          type: integer
+          example: 0
+        color:
+          type: string
+          nullable: true
+          example: "#94a3b8"
+        board_id:
+          type: integer
+
+    Card:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Implementar autenticação
+        description:
+          type: string
+          nullable: true
+          example: Usar Laravel Sanctum para auth via token
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          example: high
+        position:
+          type: integer
+          example: 0
+        due_date:
+          type: string
+          format: date
+          nullable: true
+          example: "2026-03-10"
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        column_id:
+          type: integer
+        assigned_to:
+          type: integer
+          nullable: true
+        created_by:
+          type: integer
+        comments_count:
+          type: integer
+          example: 3
+        assignee:
+          $ref: '#/components/schemas/User'
+        creator:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+
+    Label:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Bug
+        color:
+          type: string
+          example: "#ef4444"
+        workspace_id:
+          type: integer
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+        body:
+          type: string
+          example: Revisado e aprovado!
+        card_id:
+          type: integer
+        user_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            email:
+              type: string
+
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        workspace_id:
+          type: integer
+        invited_by:
+          type: integer
+        role:
+          type: string
+          enum: [admin, member]
+        status:
+          type: string
+          enum: [pending, accepted, declined]
+        token:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        inviter:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+
+    DashboardStats:
+      type: object
+      properties:
+        total_cards:
+          type: integer
+          example: 45
+        completed_cards:
+          type: integer
+          example: 18
+        overdue_cards:
+          type: integer
+          example: 3
+        completion_rate:
+          type: number
+          format: float
+          example: 40.0
+        cards_by_column:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: A Fazer
+              count:
+                type: integer
+                example: 12
+        cards_by_priority:
+          type: array
+          items:
+            type: object
+            properties:
+              priority:
+                type: string
+                example: high
+              count:
+                type: integer
+                example: 10
+        completed_per_day:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+        created_per_day:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+        member_productivity:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              completed:
+                type: integer
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: The name field is required.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+  parameters:
+    WorkspaceId:
+      name: workspace
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Workspace ID
+    BoardId:
+      name: board
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Board ID
+    ColumnId:
+      name: column
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Column ID
+    CardId:
+      name: card
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Card ID
+
+# ──────────────────────────────────────────────
+# Paths
+# ──────────────────────────────────────────────
+paths:
+  # ─── Auth ─────────────────────────────────
+  /register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Creates a new account and returns an authentication token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation]
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: João Silva
+                email:
+                  type: string
+                  format: email
+                  example: joao@taskflow.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: password123
+                password_confirmation:
+                  type: string
+                  format: password
+                  example: password123
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /login:
+    post:
+      tags: [Auth]
+      summary: Login
+      description: |
+        Authenticate with email and password. Returns a Sanctum token.
+        All previous tokens are revoked on login.
+
+        **Demo credentials:** `admin@taskflow.com` / `password`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@taskflow.com
+                password:
+                  type: string
+                  format: password
+                  example: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '422':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              example:
+                message: As credenciais estão incorretas.
+                errors:
+                  email: ["As credenciais estão incorretas."]
+
+  /logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      description: Revoke the current access token.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Logout realizado com sucesso.
+        '401':
+          description: Unauthenticated
+
+  /user:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      description: Returns the authenticated user's profile.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthenticated
+
+  # ─── Workspaces ───────────────────────────
+  /workspaces:
+    get:
+      tags: [Workspaces]
+      summary: List workspaces
+      description: List all workspaces the authenticated user belongs to, with board and member counts.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Workspace'
+
+    post:
+      tags: [Workspaces]
+      summary: Create workspace
+      description: Create a new workspace. The creator is automatically added as owner.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: Minha Empresa
+                description:
+                  type: string
+                  maxLength: 1000
+                  example: Workspace da equipe de desenvolvimento
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '422':
+          description: Validation error
+
+  /workspaces/{workspace}:
+    get:
+      tags: [Workspaces]
+      summary: Show workspace
+      description: "Get workspace details with members and active boards. **Requires:** workspace member."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workspace'
+        '403':
+          description: Forbidden — not a member
+
+    put:
+      tags: [Workspaces]
+      summary: Update workspace
+      description: "Update workspace name or description. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Workspace updated
+        '403':
+          description: Forbidden
+
+    delete:
+      tags: [Workspaces]
+      summary: Delete workspace
+      description: "Delete workspace and all associated data (CASCADE). **Requires:** owner only."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          description: Forbidden — only owner can delete
+
+  # ─── Invitations ──────────────────────────
+  /workspaces/{workspace}/invite:
+    post:
+      tags: [Invitations]
+      summary: Send invitation
+      description: |
+        Send an email invitation to join the workspace. Expires in **7 days**.
+        **Requires:** owner or admin.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: convidado@example.com
+                role:
+                  type: string
+                  enum: [admin, member]
+                  default: member
+                  example: member
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Convite enviado com sucesso.
+                  invitation:
+                    $ref: '#/components/schemas/Invitation'
+        '422':
+          description: User already member or pending invitation exists
+
+  /invitations/{token}/accept:
+    post:
+      tags: [Invitations]
+      summary: Accept invitation
+      description: |
+        Accept a workspace invitation using the token from the email link.
+        The authenticated user's email **must match** the invitation email.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Invitation token (64 characters)
+      responses:
+        '200':
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Convite aceito! Você agora faz parte do workspace."
+                  workspace:
+                    $ref: '#/components/schemas/Workspace'
+        '403':
+          description: Email mismatch
+        '410':
+          description: Invitation expired
+
+  /workspaces/{workspace}/invitations:
+    get:
+      tags: [Invitations]
+      summary: List pending invitations
+      description: "List all pending (non-expired) invitations. **Requires:** workspace member."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: List of invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+
+  /workspaces/{workspace}/invitations/{invitation}:
+    delete:
+      tags: [Invitations]
+      summary: Cancel invitation
+      description: "Cancel a pending invitation. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: invitation
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Invitation cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Convite cancelado.
+
+  # ─── Labels ───────────────────────────────
+  /workspaces/{workspace}/labels:
+    get:
+      tags: [Labels]
+      summary: List labels
+      description: "List all labels for a workspace, sorted by name. **Requires:** workspace member."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: List of labels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Label'
+
+    post:
+      tags: [Labels]
+      summary: Create label
+      description: "Create a new label for the workspace. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, color]
+              properties:
+                name:
+                  type: string
+                  maxLength: 50
+                  example: Bug
+                color:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                  example: "#ef4444"
+      responses:
+        '201':
+          description: Label created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+
+  /workspaces/{workspace}/labels/{label}:
+    put:
+      tags: [Labels]
+      summary: Update label
+      description: "Update label name and/or color. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: label
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 50
+                color:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+      responses:
+        '200':
+          description: Label updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Label'
+
+    delete:
+      tags: [Labels]
+      summary: Delete label
+      description: "Delete label and remove from all cards. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: label
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+
+  # ─── Boards ───────────────────────────────
+  /workspaces/{workspace}/boards:
+    get:
+      tags: [Boards]
+      summary: List boards
+      description: "List all boards in a workspace with column/card counts. **Requires:** workspace member."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: archived
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: If true, return only archived boards
+      responses:
+        '200':
+          description: List of boards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Board'
+
+    post:
+      tags: [Boards]
+      summary: Create board
+      description: |
+        Create a new board with **4 default columns**:
+        - A Fazer (gray)
+        - Em Progresso (blue)
+        - Revisão (amber)
+        - Concluído (green)
+
+        **Requires:** owner or admin.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: Sprint 1
+                description:
+                  type: string
+                  maxLength: 1000
+                color:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                  example: "#6366f1"
+      responses:
+        '201':
+          description: Board created with default columns
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Board'
+                  - type: object
+                    properties:
+                      columns:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Column'
+
+  /workspaces/{workspace}/boards/{board}:
+    get:
+      tags: [Boards]
+      summary: Show board (full Kanban data)
+      description: |
+        Returns the complete board with **nested columns → cards** structure.
+        Each card includes assignee, labels, creator, and comment count.
+        This is the main endpoint for rendering the Kanban board view.
+
+        **Requires:** workspace member.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+      responses:
+        '200':
+          description: Full board data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Board'
+                  - type: object
+                    properties:
+                      columns:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Column'
+                            - type: object
+                              properties:
+                                cards:
+                                  type: array
+                                  items:
+                                    $ref: '#/components/schemas/Card'
+
+    put:
+      tags: [Boards]
+      summary: Update board
+      description: "Update board name, description, color, or archive status. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+                color:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                is_archived:
+                  type: boolean
+      responses:
+        '200':
+          description: Board updated
+
+    delete:
+      tags: [Boards]
+      summary: Delete board
+      description: "Delete board and all columns/cards (CASCADE). **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+      responses:
+        '204':
+          description: Deleted
+
+  # ─── Columns ──────────────────────────────
+  /workspaces/{workspace}/boards/{board}/columns:
+    post:
+      tags: [Columns]
+      summary: Create column
+      description: "Create a new column. Position is set automatically to the end. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: Backlog
+                color:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+                  example: "#64748b"
+      responses:
+        '201':
+          description: Column created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Column'
+                  - type: object
+                    properties:
+                      cards:
+                        type: array
+                        items: {}
+                        example: []
+
+  /workspaces/{workspace}/boards/{board}/columns/reorder:
+    put:
+      tags: [Columns]
+      summary: Reorder columns
+      description: |
+        Batch reorder all columns in a board. Send an array of column IDs in the desired order.
+        Uses optimized SQL `CASE WHEN` for O(k) performance.
+
+        **Requires:** owner or admin.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ordered_ids]
+              properties:
+                ordered_ids:
+                  type: array
+                  items:
+                    type: integer
+                  example: [3, 1, 4, 2]
+                  description: Column IDs in desired order
+      responses:
+        '200':
+          description: Columns reordered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Colunas reordenadas com sucesso.
+
+  /workspaces/{workspace}/boards/{board}/columns/{column}:
+    put:
+      tags: [Columns]
+      summary: Update column
+      description: "Update column name or color. **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/ColumnId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                color:
+                  type: string
+                  pattern: '^#[0-9a-fA-F]{6}$'
+      responses:
+        '200':
+          description: Column updated
+
+    delete:
+      tags: [Columns]
+      summary: Delete column
+      description: "Delete column and all its cards (CASCADE). **Requires:** owner or admin."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/ColumnId'
+      responses:
+        '204':
+          description: Deleted
+
+  # ─── Cards ────────────────────────────────
+  /workspaces/{workspace}/boards/{board}/columns/{column}/cards:
+    post:
+      tags: [Cards]
+      summary: Create card
+      description: |
+        Create a new task card in a column. Position is set to the end automatically.
+        Supports assigning labels, priority, due date, and assignee on creation.
+
+        **Requires:** owner or admin.
+
+        📡 **Broadcasts:** `BoardUpdated` event.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/ColumnId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                  example: Implementar autenticação
+                description:
+                  type: string
+                  maxLength: 5000
+                assigned_to:
+                  type: integer
+                  description: User ID to assign
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+                  default: medium
+                due_date:
+                  type: string
+                  format: date
+                  description: "Must be today or future (YYYY-MM-DD)"
+                label_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Array of label IDs to attach
+      responses:
+        '201':
+          description: Card created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+
+  /workspaces/{workspace}/boards/{board}/cards/{card}:
+    get:
+      tags: [Cards]
+      summary: Show card details
+      description: |
+        Get full card details including assignee, creator, labels, comments, and column info.
+        **Requires:** workspace member.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/CardId'
+      responses:
+        '200':
+          description: Card details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+
+    put:
+      tags: [Cards]
+      summary: Update card
+      description: |
+        Update card fields. The `completed` boolean is a convenience — when `true`, sets `completed_at` to now; when `false`, clears it.
+        Send `label_ids` to sync labels (replaces current labels).
+
+        **Requires:** owner or admin.
+
+        📡 **Broadcasts:** `CardUpdated` event.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/CardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 5000
+                assigned_to:
+                  type: integer
+                  nullable: true
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+                due_date:
+                  type: string
+                  format: date
+                  nullable: true
+                completed:
+                  type: boolean
+                  description: "true → sets completed_at to now; false → clears it"
+                label_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Replaces all current labels
+      responses:
+        '200':
+          description: Card updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+
+    delete:
+      tags: [Cards]
+      summary: Delete card
+      description: |
+        Delete a card and all its comments (CASCADE).
+        **Requires:** owner or admin.
+
+        📡 **Broadcasts:** `BoardUpdated` event.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/CardId'
+      responses:
+        '204':
+          description: Deleted
+
+  /workspaces/{workspace}/boards/{board}/cards/{card}/move:
+    put:
+      tags: [Cards]
+      summary: Move card (drag & drop)
+      description: |
+        Move a card to a different column and/or position.
+        Used for drag & drop between columns on the Kanban board.
+
+        **Requires:** owner or admin.
+
+        📡 **Broadcasts:** `BoardUpdated` event.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/CardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [column_id, position]
+              properties:
+                column_id:
+                  type: integer
+                  description: Target column ID (must belong to the same board)
+                position:
+                  type: integer
+                  minimum: 0
+                  description: Target position (0-indexed)
+            example:
+              column_id: 3
+              position: 0
+      responses:
+        '200':
+          description: Card moved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+
+  /workspaces/{workspace}/boards/{board}/columns/{column}/cards/reorder:
+    put:
+      tags: [Cards]
+      summary: Reorder cards in column
+      description: |
+        Batch reorder cards within a single column.
+        Uses optimized SQL `CASE WHEN` for O(k) performance.
+
+        **Requires:** owner or admin.
+
+        📡 **Broadcasts:** `BoardUpdated` event.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/ColumnId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ordered_ids]
+              properties:
+                ordered_ids:
+                  type: array
+                  items:
+                    type: integer
+                  example: [5, 2, 8, 1]
+                  description: Card IDs in desired order
+      responses:
+        '200':
+          description: Cards reordered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+
+  # ─── Comments ─────────────────────────────
+  /workspaces/{workspace}/boards/{board}/cards/{card}/comments:
+    get:
+      tags: [Comments]
+      summary: List comments
+      description: "Paginated list of comments (20 per page, newest first). **Requires:** workspace member."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/CardId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+      responses:
+        '200':
+          description: Paginated comments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+                  current_page:
+                    type: integer
+                  last_page:
+                    type: integer
+                  per_page:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+
+    post:
+      tags: [Comments]
+      summary: Add comment
+      description: |
+        Add a comment to a card.
+        **Requires:** workspace member.
+
+        📡 **Broadcasts:** `CardUpdated` event.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/CardId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  maxLength: 5000
+                  example: Revisado e aprovado!
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+
+  /workspaces/{workspace}/boards/{board}/cards/{card}/comments/{comment}:
+    delete:
+      tags: [Comments]
+      summary: Delete comment
+      description: "Only the comment **author** or workspace **admin/owner** can delete."
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - $ref: '#/components/parameters/BoardId'
+        - $ref: '#/components/parameters/CardId'
+        - name: comment
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Deleted
+
+  # ─── Dashboard ────────────────────────────
+  /workspaces/{workspace}/dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: Get workspace stats
+      description: |
+        Returns aggregated analytics for the workspace including:
+        - Total/completed/overdue card counts
+        - Cards by column and priority
+        - 30-day completion & creation trends
+        - Member productivity rankings
+
+        **Cached in Redis for 60 seconds.**
+
+        **Requires:** workspace member.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+
+  /workspaces/{workspace}/dashboard/activity:
+    get:
+      tags: [Dashboard]
+      summary: Get recent activity
+      description: |
+        Returns the **last 50 activity log entries** for the workspace.
+        Each entry includes the user, action type, and timestamp.
+
+        **Requires:** workspace member.
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    user_id:
+                      type: integer
+                    workspace_id:
+                      type: integer
+                    action:
+                      type: string
+                      enum: [board_created, board_deleted, card_created, card_updated, card_moved, card_deleted, comment_added]
+                    description:
+                      type: string
+                      example: criou um card
+                    subject_type:
+                      type: string
+                    subject_id:
+                      type: integer
+                    properties:
+                      type: object
+                    created_at:
+                      type: string
+                      format: date-time
+                    user:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        email:
+                          type: string
